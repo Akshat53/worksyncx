@@ -1,15 +1,26 @@
 package com.worksyncx.hrms.service.auth;
 
+import com.worksyncx.hrms.dto.auth.AuthPermissionDto;
 import com.worksyncx.hrms.dto.auth.AuthResponse;
+import com.worksyncx.hrms.dto.auth.AuthRoleDto;
+import com.worksyncx.hrms.dto.auth.ChangePasswordRequest;
 import com.worksyncx.hrms.dto.auth.LoginRequest;
 import com.worksyncx.hrms.dto.auth.RegisterRequest;
+import com.worksyncx.hrms.entity.Department;
+import com.worksyncx.hrms.entity.Designation;
+import com.worksyncx.hrms.entity.Employee;
 import com.worksyncx.hrms.entity.Role;
 import com.worksyncx.hrms.entity.Subscription;
 import com.worksyncx.hrms.entity.Tenant;
 import com.worksyncx.hrms.entity.User;
 import com.worksyncx.hrms.enums.BillingCycle;
+import com.worksyncx.hrms.enums.EmploymentStatus;
+import com.worksyncx.hrms.enums.EmploymentType;
 import com.worksyncx.hrms.enums.SubscriptionPlan;
 import com.worksyncx.hrms.enums.SubscriptionStatus;
+import com.worksyncx.hrms.repository.DepartmentRepository;
+import com.worksyncx.hrms.repository.DesignationRepository;
+import com.worksyncx.hrms.repository.EmployeeRepository;
 import com.worksyncx.hrms.repository.RoleRepository;
 import com.worksyncx.hrms.repository.TenantRepository;
 import com.worksyncx.hrms.repository.UserRepository;
@@ -52,6 +63,15 @@ public class AuthService {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private DesignationRepository designationRepository;
+
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
     public AuthResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
@@ -61,11 +81,7 @@ public class AuthService {
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         User user = (User) authentication.getPrincipal();
-        List<String> roles = user.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .filter(auth -> auth.startsWith("ROLE_"))
-            .map(auth -> auth.substring(5))
-            .collect(Collectors.toList());
+        List<AuthRoleDto> roleDtos = convertRolesToDtos(user.getRoles());
 
         return new AuthResponse(
             jwt,
@@ -74,7 +90,8 @@ public class AuthService {
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),
-            roles
+            roleDtos,
+            user.getMustChangePassword()
         );
     }
 
@@ -96,15 +113,15 @@ public class AuthService {
         tenant.setIsActive(true);
         tenant = tenantRepository.save(tenant);
 
-        // Create Subscription (Free trial)
+        // Create Subscription (Free plan)
         Subscription subscription = new Subscription();
         subscription.setTenant(tenant);
-        subscription.setPlan(SubscriptionPlan.STARTER);
+        subscription.setPlan(SubscriptionPlan.FREE);
         subscription.setStatus(SubscriptionStatus.ACTIVE);
         subscription.setStartDate(LocalDate.now());
-        subscription.setEndDate(LocalDate.now().plusDays(30)); // 30 days trial
-        subscription.setMaxEmployees(10);
-        subscription.setModules(Set.of("employee", "attendance", "leave"));
+        subscription.setEndDate(null); // Free plan never expires
+        subscription.setMaxEmployees(5);
+        subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES"));
         subscription.setFeatures(new HashSet<>());
         subscription.setBillingCycle(BillingCycle.MONTHLY);
         subscription.setAmount(BigDecimal.ZERO);
@@ -136,6 +153,55 @@ public class AuthService {
 
         user.setRoles(Set.of(adminRole));
         user = userRepository.save(user);
+        final Long userId = user.getId();
+
+        // Create default department if none exists
+        Department department = departmentRepository.findByTenantIdAndCode(tenantId, "ADMIN")
+            .orElseGet(() -> {
+                Department newDept = new Department();
+                newDept.setTenantId(tenantId);
+                newDept.setName("Administration");
+                newDept.setCode("ADMIN");
+                newDept.setDescription("Default administration department");
+                newDept.setIsActive(true);
+                newDept.setCreatedBy(userId);
+                return departmentRepository.save(newDept);
+            });
+
+        // Create default designation if none exists
+        Designation designation = designationRepository.findByTenantIdAndDepartmentId(tenantId, department.getId())
+            .stream()
+            .findFirst()
+            .orElseGet(() -> {
+                Designation newDesig = new Designation();
+                newDesig.setTenantId(tenantId);
+                newDesig.setName("Company Admin");
+                newDesig.setCode("CADMIN");
+                newDesig.setDescription("Company Administrator");
+                newDesig.setDepartmentId(department.getId());
+                newDesig.setIsActive(true);
+                newDesig.setCreatedBy(userId);
+                return designationRepository.save(newDesig);
+            });
+
+        // Create employee record for the admin user
+        Employee employee = new Employee();
+        employee.setTenantId(tenantId);
+        employee.setUserId(user.getId());
+        employee.setEmployeeCode("EMP001");
+        employee.setFirstName(request.getFirstName());
+        employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
+        employee.setPhone(request.getPhone());
+        employee.setDepartmentId(department.getId());
+        employee.setDesignationId(designation.getId());
+        employee.setDateOfJoining(LocalDate.now());
+        employee.setEmploymentType(EmploymentType.PERMANENT);
+        employee.setEmploymentStatus(EmploymentStatus.ACTIVE);
+        employee.setBasicSalary(BigDecimal.ZERO);
+        employee.setCurrency("USD");
+        employee.setCreatedBy(user.getId());
+        employeeRepository.save(employee);
 
         // Generate token
         Authentication authentication = authenticationManager.authenticate(
@@ -144,6 +210,10 @@ public class AuthService {
 
         String jwt = jwtUtils.generateJwtToken(authentication);
 
+        // Fetch updated user to get roles with permissions
+        User updatedUser = (User) authentication.getPrincipal();
+        List<AuthRoleDto> roleDtos = convertRolesToDtos(updatedUser.getRoles());
+
         return new AuthResponse(
             jwt,
             user.getId(),
@@ -151,7 +221,54 @@ public class AuthService {
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),
-            List.of("TENANT_ADMIN")
+            roleDtos,
+            false // Admin doesn't need to change password
         );
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        // Validate that new password and confirm password match
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new RuntimeException("New password and confirm password do not match");
+        }
+
+        // Get the user
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        // Update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false); // Reset the flag after password change
+        userRepository.save(user);
+    }
+
+    /**
+     * Helper method to convert user roles to AuthRoleDto with permissions
+     */
+    private List<AuthRoleDto> convertRolesToDtos(Set<Role> roles) {
+        return roles.stream()
+            .map(role -> AuthRoleDto.builder()
+                .id(role.getId())
+                .name(role.getName())
+                .description(role.getDescription())
+                .permissions(
+                    role.getPermissions().stream()
+                        .map(permission -> AuthPermissionDto.builder()
+                            .id(permission.getId())
+                            .code(permission.getCode())
+                            .name(permission.getName())
+                            .module(permission.getModule())
+                            .action(permission.getAction())
+                            .build())
+                        .collect(Collectors.toList())
+                )
+                .build())
+            .collect(Collectors.toList());
     }
 }

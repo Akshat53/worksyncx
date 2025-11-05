@@ -17,10 +17,11 @@ public class AuthResponse {
     private String email;
     private String firstName;
     private String lastName;
-    private List<String> roles;
+    private List<AuthRoleDto> roles;
+    private Boolean mustChangePassword;
 
     public AuthResponse(String token, Long userId, Long tenantId, String email,
-                       String firstName, String lastName, List<String> roles) {
+                       String firstName, String lastName, List<AuthRoleDto> roles, Boolean mustChangePassword) {
         this.token = token;
         this.userId = userId;
         this.tenantId = tenantId;
@@ -28,5 +29,6 @@ public class AuthResponse {
         this.firstName = firstName;
         this.lastName = lastName;
         this.roles = roles;
+        this.mustChangePassword = mustChangePassword;
     }
 }

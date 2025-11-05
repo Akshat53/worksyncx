@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('DEPARTMENT:CREATE')")
     public ResponseEntity<?> createDepartment(@Valid @RequestBody DepartmentRequest request) {
         try {
             DepartmentResponse response = departmentService.createDepartment(request);
@@ -32,6 +34,7 @@ public class DepartmentController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     public ResponseEntity<List<DepartmentResponse>> getAllDepartments(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly
     ) {
@@ -42,6 +45,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     public ResponseEntity<?> getDepartmentById(@PathVariable Long id) {
         try {
             DepartmentResponse response = departmentService.getDepartmentById(id);
@@ -53,6 +57,7 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEPARTMENT:UPDATE')")
     public ResponseEntity<?> updateDepartment(
         @PathVariable Long id,
         @Valid @RequestBody DepartmentRequest request
@@ -67,6 +72,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEPARTMENT:DELETE')")
     public ResponseEntity<?> deleteDepartment(@PathVariable Long id) {
         try {
             departmentService.deleteDepartment(id);

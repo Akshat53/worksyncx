@@ -1,6 +1,7 @@
 package com.worksyncx.hrms.enums;
 
-public enum BillingCycle {
+public enum
+ BillingCycle {
     MONTHLY,
     QUARTERLY,
     ANNUAL

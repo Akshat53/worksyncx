@@ -53,4 +53,5 @@ public class EmployeeResponse {
     private LocalDateTime updatedAt;
     private Long createdBy;
     private Long updatedBy;
+    private String temporaryPassword; // Only populated on creation, for admin to share with employee
 }

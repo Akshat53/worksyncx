@@ -1,15 +1,18 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
 import com.worksyncx.hrms.dto.attendance.AttendanceRequest;
 import com.worksyncx.hrms.dto.attendance.AttendanceResponse;
 import com.worksyncx.hrms.dto.attendance.CheckInRequest;
 import com.worksyncx.hrms.dto.attendance.CheckOutRequest;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.service.attendance.AttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -25,6 +28,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping("/check-in/{employeeId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> checkIn(
         @PathVariable Long employeeId,
         @RequestBody CheckInRequest request
@@ -39,6 +43,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/check-out/{employeeId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> checkOut(
         @PathVariable Long employeeId,
         @RequestBody CheckOutRequest request
@@ -53,6 +58,8 @@ public class AttendanceController {
     }
 
     @PostMapping("/mark")
+    @RequiresModule(Module.ATTENDANCE)
+    @PreAuthorize("hasAuthority('ATTENDANCE:MARK')")
     public ResponseEntity<?> markAttendance(@Valid @RequestBody AttendanceRequest request) {
         try {
             AttendanceResponse response = attendanceService.markAttendance(request);
@@ -64,6 +71,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/employee/{employeeId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getEmployeeAttendance(
         @PathVariable Long employeeId,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -79,6 +87,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/employee/{employeeId}/today")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getTodayAttendance(@PathVariable Long employeeId) {
         try {
             AttendanceResponse response = attendanceService.getTodayAttendance(employeeId);
@@ -89,7 +98,38 @@ public class AttendanceController {
         }
     }
 
+    @GetMapping("/today")
+    @RequiresModule(Module.ATTENDANCE)
+    @PreAuthorize("hasAuthority('ATTENDANCE:READ')")
+    public ResponseEntity<?> getAllTodayAttendance() {
+        try {
+            LocalDate today = LocalDate.now();
+            List<AttendanceResponse> records = attendanceService.getAttendanceByDate(today);
+            return ResponseEntity.ok(records);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get today's attendance", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/date/{date}")
+    @RequiresModule(Module.ATTENDANCE)
+    @PreAuthorize("hasAuthority('ATTENDANCE:READ')")
+    public ResponseEntity<?> getAttendanceByDate(
+        @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        try {
+            List<AttendanceResponse> records = attendanceService.getAttendanceByDate(date);
+            return ResponseEntity.ok(records);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get attendance for date", "message", e.getMessage()));
+        }
+    }
+
     @PutMapping("/employee/{employeeId}/date/{date}")
+    @RequiresModule(Module.ATTENDANCE)
+    @PreAuthorize("hasAuthority('ATTENDANCE:UPDATE')")
     public ResponseEntity<?> updateAttendance(
         @PathVariable Long employeeId,
         @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,

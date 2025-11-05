@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class DesignationController {
     private final DesignationService designationService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('DESIGNATION:CREATE')")
     public ResponseEntity<?> createDesignation(@Valid @RequestBody DesignationRequest request) {
         try {
             DesignationResponse response = designationService.createDesignation(request);
@@ -32,6 +34,7 @@ public class DesignationController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('DESIGNATION:READ')")
     public ResponseEntity<List<DesignationResponse>> getAllDesignations(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
         @RequestParam(required = false) Long departmentId
@@ -50,6 +53,7 @@ public class DesignationController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('DESIGNATION:READ')")
     public ResponseEntity<?> getDesignationById(@PathVariable Long id) {
         try {
             DesignationResponse response = designationService.getDesignationById(id);
@@ -61,6 +65,7 @@ public class DesignationController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('DESIGNATION:UPDATE')")
     public ResponseEntity<?> updateDesignation(
         @PathVariable Long id,
         @Valid @RequestBody DesignationRequest request
@@ -75,6 +80,7 @@ public class DesignationController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DESIGNATION:DELETE')")
     public ResponseEntity<?> deleteDesignation(@PathVariable Long id) {
         try {
             designationService.deleteDesignation(id);

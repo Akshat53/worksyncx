@@ -147,6 +147,16 @@ public class AttendanceService {
         return mapToResponse(record);
     }
 
+    @Transactional(readOnly = true)
+    public List<AttendanceResponse> getAttendanceByDate(LocalDate date) {
+        Long tenantId = TenantContext.getTenantId();
+        return attendanceRecordRepository
+            .findByTenantIdAndAttendanceDate(tenantId, date)
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+    }
+
     @Transactional
     public AttendanceResponse updateAttendance(Long employeeId, LocalDate date, AttendanceRequest request) {
         Long tenantId = TenantContext.getTenantId();

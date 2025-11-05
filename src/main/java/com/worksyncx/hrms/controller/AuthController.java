@@ -1,6 +1,7 @@
 package com.worksyncx.hrms.controller;
 
 import com.worksyncx.hrms.dto.auth.AuthResponse;
+import com.worksyncx.hrms.dto.auth.ChangePasswordRequest;
 import com.worksyncx.hrms.dto.auth.LoginRequest;
 import com.worksyncx.hrms.dto.auth.RegisterRequest;
 import com.worksyncx.hrms.entity.User;
@@ -72,6 +73,27 @@ public class AuthController {
             .toList());
 
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not authenticated");
+            }
+
+            User user = (User) authentication.getPrincipal();
+            authService.changePassword(user.getId(), request);
+
+            return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Password change failed");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
     }
 
     @PostMapping("/logout")

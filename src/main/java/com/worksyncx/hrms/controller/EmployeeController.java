@@ -2,12 +2,16 @@ package com.worksyncx.hrms.controller;
 
 import com.worksyncx.hrms.dto.employee.EmployeeRequest;
 import com.worksyncx.hrms.dto.employee.EmployeeResponse;
+import com.worksyncx.hrms.entity.User;
 import com.worksyncx.hrms.enums.EmploymentStatus;
 import com.worksyncx.hrms.service.employee.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +25,9 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
 
+    // Admin-only endpoints
     @PostMapping
+    @PreAuthorize("hasAuthority('EMPLOYEE:CREATE')")
     public ResponseEntity<?> createEmployee(@Valid @RequestBody EmployeeRequest request) {
         try {
             EmployeeResponse response = employeeService.createEmployee(request);
@@ -33,6 +39,7 @@ public class EmployeeController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<List<EmployeeResponse>> getAllEmployees(
         @RequestParam(required = false) String status,
         @RequestParam(required = false) Long departmentId
@@ -56,6 +63,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<?> getEmployeeById(@PathVariable Long id) {
         try {
             EmployeeResponse response = employeeService.getEmployeeById(id);
@@ -67,6 +75,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/code/{employeeCode}")
+    @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<?> getEmployeeByCode(@PathVariable String employeeCode) {
         try {
             EmployeeResponse response = employeeService.getEmployeeByCode(employeeCode);
@@ -78,6 +87,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('EMPLOYEE:UPDATE')")
     public ResponseEntity<?> updateEmployee(
         @PathVariable Long id,
         @Valid @RequestBody EmployeeRequest request
@@ -92,6 +102,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('EMPLOYEE:DELETE')")
     public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         try {
             employeeService.deleteEmployee(id);
@@ -99,6 +110,37 @@ public class EmployeeController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Failed to delete employee", "message", e.getMessage()));
+        }
+    }
+
+    // Employee self-service endpoints
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
+    public ResponseEntity<?> getMyProfile() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            EmployeeResponse response = employeeService.getEmployeeByUserId(user.getId());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Profile not found", "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
+    public ResponseEntity<?> updateMyProfile(@Valid @RequestBody Map<String, Object> updates) {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            User user = (User) authentication.getPrincipal();
+
+            EmployeeResponse response = employeeService.updateEmployeeProfile(user.getId(), updates);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to update profile", "message", e.getMessage()));
         }
     }
 }
