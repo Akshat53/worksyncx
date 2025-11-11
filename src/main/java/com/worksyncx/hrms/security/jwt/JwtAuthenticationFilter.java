@@ -33,33 +33,48 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
+            String authHeader = request.getHeader("Authorization");
+            logger.info("JWT Filter - Path: {}, Authorization Header: {}",
+                request.getRequestURI(),
+                authHeader != null ? "Present (length=" + authHeader.length() + ")" : "MISSING");
+
             String jwt = parseJwt(request);
 
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                Long userId = jwtUtils.getUserIdFromJwtToken(jwt);
-                Long tenantId = jwtUtils.getTenantIdFromJwtToken(jwt);
+            if (jwt != null) {
+                logger.info("JWT Filter - Token parsed, length: {}, first 20 chars: {}",
+                    jwt.length(),
+                    jwt.length() > 20 ? jwt.substring(0, 20) + "..." : jwt);
 
-                // Set tenant context BEFORE loading user details
-                TenantContext.setTenantId(tenantId);
-                TenantContext.setUserId(userId);
+                if (jwtUtils.validateJwtToken(jwt)) {
+                    String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                    Long userId = jwtUtils.getUserIdFromJwtToken(jwt);
+                    Long tenantId = jwtUtils.getTenantIdFromJwtToken(jwt);
 
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    // Set tenant context BEFORE loading user details
+                    TenantContext.setTenantId(tenantId);
+                    TenantContext.setUserId(userId);
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                logger.debug("Set Authentication for user: {} with tenantId: {}", username, tenantId);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                    logger.info("JWT Filter - Authentication set for user: {} with tenantId: {}", username, tenantId);
+                } else {
+                    logger.warn("JWT Filter - Token validation FAILED");
+                }
+            } else {
+                logger.warn("JWT Filter - No JWT token found in request");
             }
         } catch (Exception e) {
-            logger.error("Cannot set user authentication: {}", e.getMessage());
+            logger.error("JWT Filter - Cannot set user authentication: {}", e.getMessage(), e);
         }
 
         try {

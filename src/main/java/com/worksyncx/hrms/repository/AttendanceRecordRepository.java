@@ -1,6 +1,8 @@
 package com.worksyncx.hrms.repository;
 
 import com.worksyncx.hrms.entity.AttendanceRecord;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +20,10 @@ public interface AttendanceRecordRepository extends JpaRepository<AttendanceReco
         Long tenantId, Long employeeId, LocalDate date
     );
     List<AttendanceRecord> findByTenantIdAndAttendanceDate(Long tenantId, LocalDate date);
+
+    // Paginated methods
+    Page<AttendanceRecord> findByTenantIdAndEmployeeIdAndAttendanceDateBetween(
+        Long tenantId, Long employeeId, LocalDate startDate, LocalDate endDate, Pageable pageable
+    );
+    Page<AttendanceRecord> findByTenantIdAndAttendanceDate(Long tenantId, LocalDate date, Pageable pageable);
 }

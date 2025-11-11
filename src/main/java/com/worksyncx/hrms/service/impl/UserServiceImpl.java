@@ -1,6 +1,7 @@
 package com.worksyncx.hrms.service.impl;
 
 import com.worksyncx.hrms.dto.UserRequest;
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.permission.PermissionResponse;
 import com.worksyncx.hrms.dto.role.RoleResponse;
 import com.worksyncx.hrms.dto.user.AssignRolesRequest;
@@ -13,6 +14,8 @@ import com.worksyncx.hrms.repository.UserRepository;
 import com.worksyncx.hrms.security.TenantContext;
 import com.worksyncx.hrms.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -137,6 +140,37 @@ public class UserServiceImpl implements UserService {
         user.getRoles().remove(role);
         User savedUser = userRepository.save(user);
         return mapToUserResponse(savedUser);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<UserResponse> getAllUsersWithRolesPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<User> page = userRepository.findByTenantId(tenantId, pageable);
+        return mapToPageResponse(page);
+    }
+
+    // ==================== Mappers ====================
+
+    private PageResponse<UserResponse> mapToPageResponse(Page<User> page) {
+        List<UserResponse> content = page.getContent()
+            .stream()
+            .map(this::mapToUserResponse)
+            .collect(Collectors.toList());
+
+        return PageResponse.<UserResponse>builder()
+            .content(content)
+            .pageNumber(page.getNumber())
+            .pageSize(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .first(page.isFirst())
+            .last(page.isLast())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .numberOfElements(page.getNumberOfElements())
+            .empty(page.isEmpty())
+            .build();
     }
 
     // Helper method to map User entity to UserResponse DTO

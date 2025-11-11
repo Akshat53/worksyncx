@@ -31,4 +31,11 @@ public class AttendanceResponse {
     private LocalDateTime updatedAt;
     private Long createdBy;
     private Long updatedBy;
+
+    // Shift-related fields
+    private Long shiftId;
+    private LocalTime expectedStartTime;
+    private LocalTime expectedEndTime;
+    private Integer lateByMinutes;
+    private Integer earlyLeaveByMinutes;
 }

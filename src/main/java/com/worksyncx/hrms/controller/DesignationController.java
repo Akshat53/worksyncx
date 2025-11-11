@@ -1,10 +1,14 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.designation.DesignationRequest;
 import com.worksyncx.hrms.dto.designation.DesignationResponse;
 import com.worksyncx.hrms.service.designation.DesignationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,6 +54,36 @@ public class DesignationController {
         }
 
         return ResponseEntity.ok(designations);
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('DESIGNATION:READ')")
+    public ResponseEntity<PageResponse<DesignationResponse>> getAllDesignationsPaginated(
+        @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
+        @RequestParam(required = false) Long departmentId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "ASC") String sortDirection
+    ) {
+        // Create sort object
+        Sort sort = sortDirection.equalsIgnoreCase("DESC")
+            ? Sort.by(sortBy).descending()
+            : Sort.by(sortBy).ascending();
+
+        // Create pageable object
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        PageResponse<DesignationResponse> designationsPage;
+        if (departmentId != null) {
+            designationsPage = designationService.getDesignationsByDepartmentPaginated(departmentId, pageable);
+        } else if (activeOnly) {
+            designationsPage = designationService.getActiveDesignationsPaginated(pageable);
+        } else {
+            designationsPage = designationService.getAllDesignationsPaginated(pageable);
+        }
+
+        return ResponseEntity.ok(designationsPage);
     }
 
     @GetMapping("/{id}")

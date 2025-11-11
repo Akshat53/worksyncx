@@ -1,0 +1,18 @@
+package com.worksyncx.hrms.dto.auth;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuthPermissionDto {
+    private Long id;
+    private String code;
+    private String name;
+    private String module;
+    private String action;
+}

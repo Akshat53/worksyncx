@@ -1,10 +1,14 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.leave.*;
 import com.worksyncx.hrms.enums.LeaveStatus;
 import com.worksyncx.hrms.service.leave.LeaveService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -110,6 +114,45 @@ public class LeaveController {
             }
 
             return ResponseEntity.ok(requests);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Invalid status value", "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get leave requests", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/requests/page")
+    public ResponseEntity<?> getAllLeaveRequestsPaginated(
+        @RequestParam(required = false) Long employeeId,
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<LeaveRequestResponse> requestsPage;
+
+            if (employeeId != null) {
+                requestsPage = leaveService.getLeaveRequestsByEmployeePaginated(employeeId, pageable);
+            } else if (status != null) {
+                LeaveStatus leaveStatus = LeaveStatus.valueOf(status.toUpperCase());
+                requestsPage = leaveService.getLeaveRequestsByStatusPaginated(leaveStatus, pageable);
+            } else {
+                requestsPage = leaveService.getAllLeaveRequestsPaginated(pageable);
+            }
+
+            return ResponseEntity.ok(requestsPage);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
                 .body(Map.of("error", "Invalid status value", "message", e.getMessage()));

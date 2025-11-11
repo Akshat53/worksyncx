@@ -1,10 +1,14 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.department.DepartmentRequest;
 import com.worksyncx.hrms.dto.department.DepartmentResponse;
 import com.worksyncx.hrms.service.department.DepartmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +46,30 @@ public class DepartmentController {
             ? departmentService.getActiveDepartments()
             : departmentService.getAllDepartments();
         return ResponseEntity.ok(departments);
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
+    public ResponseEntity<PageResponse<DepartmentResponse>> getAllDepartmentsPaginated(
+        @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "ASC") String sortDirection
+    ) {
+        // Create sort object
+        Sort sort = sortDirection.equalsIgnoreCase("DESC")
+            ? Sort.by(sortBy).descending()
+            : Sort.by(sortBy).ascending();
+
+        // Create pageable object
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        PageResponse<DepartmentResponse> departmentsPage = activeOnly
+            ? departmentService.getActiveDepartmentsPaginated(pageable)
+            : departmentService.getAllDepartmentsPaginated(pageable);
+
+        return ResponseEntity.ok(departmentsPage);
     }
 
     @GetMapping("/{id}")

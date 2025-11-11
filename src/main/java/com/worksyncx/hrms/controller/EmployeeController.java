@@ -1,5 +1,6 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.employee.EmployeeRequest;
 import com.worksyncx.hrms.dto.employee.EmployeeResponse;
 import com.worksyncx.hrms.entity.User;
@@ -7,6 +8,9 @@ import com.worksyncx.hrms.enums.EmploymentStatus;
 import com.worksyncx.hrms.service.employee.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,6 +64,42 @@ public class EmployeeController {
         }
 
         return ResponseEntity.ok(employees);
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
+    public ResponseEntity<PageResponse<EmployeeResponse>> getAllEmployeesPaginated(
+        @RequestParam(required = false) String status,
+        @RequestParam(required = false) Long departmentId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "ASC") String sortDirection
+    ) {
+        // Create sort object
+        Sort sort = sortDirection.equalsIgnoreCase("DESC")
+            ? Sort.by(sortBy).descending()
+            : Sort.by(sortBy).ascending();
+
+        // Create pageable object
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        PageResponse<EmployeeResponse> employeesPage;
+
+        if (departmentId != null) {
+            employeesPage = employeeService.getEmployeesByDepartmentPaginated(departmentId, pageable);
+        } else if (status != null) {
+            try {
+                EmploymentStatus employmentStatus = EmploymentStatus.valueOf(status.toUpperCase());
+                employeesPage = employeeService.getEmployeesByStatusPaginated(employmentStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        } else {
+            employeesPage = employeeService.getAllEmployeesPaginated(pageable);
+        }
+
+        return ResponseEntity.ok(employeesPage);
     }
 
     @GetMapping("/{id}")

@@ -1,5 +1,6 @@
 package com.worksyncx.hrms.service.leave;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.leave.*;
 import com.worksyncx.hrms.entity.LeaveRequest;
 import com.worksyncx.hrms.entity.LeaveType;
@@ -9,6 +10,8 @@ import com.worksyncx.hrms.repository.LeaveRequestRepository;
 import com.worksyncx.hrms.repository.LeaveTypeRepository;
 import com.worksyncx.hrms.security.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -234,7 +237,51 @@ public class LeaveService {
         return mapLeaveRequestToResponse(leaveRequest);
     }
 
+    // ==================== Paginated Methods ====================
+
+    @Transactional(readOnly = true)
+    public PageResponse<LeaveRequestResponse> getAllLeaveRequestsPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<LeaveRequest> page = leaveRequestRepository.findByTenantId(tenantId, pageable);
+        return mapToPageResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<LeaveRequestResponse> getLeaveRequestsByEmployeePaginated(Long employeeId, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<LeaveRequest> page = leaveRequestRepository.findByTenantIdAndEmployeeId(tenantId, employeeId, pageable);
+        return mapToPageResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<LeaveRequestResponse> getLeaveRequestsByStatusPaginated(LeaveStatus status, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<LeaveRequest> page = leaveRequestRepository.findByTenantIdAndStatus(tenantId, status, pageable);
+        return mapToPageResponse(page);
+    }
+
     // ==================== Mappers ====================
+
+    private PageResponse<LeaveRequestResponse> mapToPageResponse(Page<LeaveRequest> page) {
+        List<LeaveRequestResponse> content = page.getContent()
+            .stream()
+            .map(this::mapLeaveRequestToResponse)
+            .collect(Collectors.toList());
+
+        return PageResponse.<LeaveRequestResponse>builder()
+            .content(content)
+            .pageNumber(page.getNumber())
+            .pageSize(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .first(page.isFirst())
+            .last(page.isLast())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .numberOfElements(page.getNumberOfElements())
+            .empty(page.isEmpty())
+            .build();
+    }
 
     private LeaveTypeResponse mapLeaveTypeToResponse(LeaveType leaveType) {
         return LeaveTypeResponse.builder()

@@ -1,5 +1,6 @@
 package com.worksyncx.hrms.service.payroll;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.payroll.PayrollCycleRequest;
 import com.worksyncx.hrms.dto.payroll.PayrollCycleResponse;
 import com.worksyncx.hrms.dto.payroll.PayrollRequest;
@@ -12,6 +13,8 @@ import com.worksyncx.hrms.repository.PayrollCycleRepository;
 import com.worksyncx.hrms.repository.PayrollRepository;
 import com.worksyncx.hrms.security.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -230,6 +233,36 @@ public class PayrollService {
         payrollRepository.delete(payroll);
     }
 
+    // ==================== Paginated Methods ====================
+
+    @Transactional(readOnly = true)
+    public PageResponse<PayrollCycleResponse> getAllPayrollCyclesPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<PayrollCycle> page = payrollCycleRepository.findByTenantId(tenantId, pageable);
+        return mapCyclePageToResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PayrollResponse> getAllPayrollsPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Payroll> page = payrollRepository.findByTenantId(tenantId, pageable);
+        return mapPayrollPageToResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PayrollResponse> getPayrollsByCyclePaginated(Long cycleId, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Payroll> page = payrollRepository.findByTenantIdAndPayrollCycleId(tenantId, cycleId, pageable);
+        return mapPayrollPageToResponse(page);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<PayrollResponse> getPayrollsByEmployeePaginated(Long employeeId, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Payroll> page = payrollRepository.findByTenantIdAndEmployeeId(tenantId, employeeId, pageable);
+        return mapPayrollPageToResponse(page);
+    }
+
     // ==================== Helper Methods ====================
 
     private void mapRequestToPayroll(PayrollRequest request, Payroll payroll) {
@@ -321,6 +354,48 @@ public class PayrollService {
             .updatedAt(payroll.getUpdatedAt())
             .createdBy(payroll.getCreatedBy())
             .updatedBy(payroll.getUpdatedBy())
+            .build();
+    }
+
+    private PageResponse<PayrollCycleResponse> mapCyclePageToResponse(Page<PayrollCycle> page) {
+        List<PayrollCycleResponse> content = page.getContent()
+            .stream()
+            .map(this::mapCycleToResponse)
+            .collect(Collectors.toList());
+
+        return PageResponse.<PayrollCycleResponse>builder()
+            .content(content)
+            .pageNumber(page.getNumber())
+            .pageSize(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .first(page.isFirst())
+            .last(page.isLast())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .numberOfElements(page.getNumberOfElements())
+            .empty(page.isEmpty())
+            .build();
+    }
+
+    private PageResponse<PayrollResponse> mapPayrollPageToResponse(Page<Payroll> page) {
+        List<PayrollResponse> content = page.getContent()
+            .stream()
+            .map(this::mapPayrollToResponse)
+            .collect(Collectors.toList());
+
+        return PageResponse.<PayrollResponse>builder()
+            .content(content)
+            .pageNumber(page.getNumber())
+            .pageSize(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .first(page.isFirst())
+            .last(page.isLast())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .numberOfElements(page.getNumberOfElements())
+            .empty(page.isEmpty())
             .build();
     }
 }

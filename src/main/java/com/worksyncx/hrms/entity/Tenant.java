@@ -44,6 +44,10 @@ public class Tenant {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    // Track the primary owner (user who created/owns the tenant and subscription)
+    @Column(name = "primary_owner_user_id")
+    private Long primaryOwnerUserId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

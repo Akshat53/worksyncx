@@ -1,12 +1,16 @@
 package com.worksyncx.hrms.controller;
 
 import com.worksyncx.hrms.dto.UserRequest;
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.user.AssignRolesRequest;
 import com.worksyncx.hrms.dto.user.UserResponse;
 import com.worksyncx.hrms.entity.User;
 import com.worksyncx.hrms.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -96,6 +100,32 @@ public class UserController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Failed to remove role", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/with-roles/page")
+    @PreAuthorize("hasAuthority('ROLE_TENANT_ADMIN')")
+    public ResponseEntity<?> getAllUsersWithRolesPaginated(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "ASC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<UserResponse> usersPage = userService.getAllUsersWithRolesPaginated(pageable);
+
+            return ResponseEntity.ok(usersPage);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get users", "message", e.getMessage()));
         }
     }
 }

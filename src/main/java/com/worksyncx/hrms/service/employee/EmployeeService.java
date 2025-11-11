@@ -3,6 +3,7 @@ package com.worksyncx.hrms.service.employee;
 import com.worksyncx.hrms.dto.employee.EmployeeRequest;
 import com.worksyncx.hrms.dto.employee.EmployeeResponse;
 import com.worksyncx.hrms.entity.Employee;
+import com.worksyncx.hrms.entity.Tenant;
 import com.worksyncx.hrms.entity.User;
 import com.worksyncx.hrms.entity.Role;
 import com.worksyncx.hrms.enums.EmploymentStatus;
@@ -10,11 +11,15 @@ import com.worksyncx.hrms.exception.*;
 import com.worksyncx.hrms.repository.DepartmentRepository;
 import com.worksyncx.hrms.repository.DesignationRepository;
 import com.worksyncx.hrms.repository.EmployeeRepository;
+import com.worksyncx.hrms.repository.TenantRepository;
 import com.worksyncx.hrms.repository.UserRepository;
 import com.worksyncx.hrms.repository.RoleRepository;
 import com.worksyncx.hrms.security.TenantContext;
 import com.worksyncx.hrms.service.subscription.SubscriptionService;
+import com.worksyncx.hrms.dto.common.PageResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +39,7 @@ public class EmployeeService {
     private final DepartmentRepository departmentRepository;
     private final DesignationRepository designationRepository;
     private final SubscriptionService subscriptionService;
+    private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -154,8 +160,8 @@ public class EmployeeService {
                 .orElseThrow(() -> new EmployeeNotFoundException("Manager not found with id: " + request.getManagerId()));
         }
 
-        // Check if user with this email already exists
-        userRepository.findByEmail(request.getEmail())
+        // Check if user with this email already exists within this tenant
+        userRepository.findByTenantIdAndEmail(tenantId, request.getEmail())
             .ifPresent(u -> {
                 throw new DuplicateEmailException("User with email " + request.getEmail() + " already exists");
             });
@@ -233,6 +239,43 @@ public class EmployeeService {
             .stream()
             .map(this::mapToResponse)
             .collect(Collectors.toList());
+    }
+
+    // =====================================================
+    // PAGINATED METHODS
+    // =====================================================
+
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> getAllEmployeesPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Employee> page = employeeRepository.findByTenantId(tenantId, pageable);
+        List<EmployeeResponse> content = page.getContent()
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+        return PageResponse.from(page, content);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> getEmployeesByStatusPaginated(EmploymentStatus status, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Employee> page = employeeRepository.findByTenantIdAndEmploymentStatus(tenantId, status, pageable);
+        List<EmployeeResponse> content = page.getContent()
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+        return PageResponse.from(page, content);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<EmployeeResponse> getEmployeesByDepartmentPaginated(Long departmentId, Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Employee> page = employeeRepository.findByTenantIdAndDepartmentId(tenantId, departmentId, pageable);
+        List<EmployeeResponse> content = page.getContent()
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+        return PageResponse.from(page, content);
     }
 
     @Transactional(readOnly = true)
@@ -333,8 +376,8 @@ public class EmployeeService {
                     }
                 });
 
-            // Check if another user is using this email
-            userRepository.findByEmail(request.getEmail())
+            // Check if another user within this tenant is using this email
+            userRepository.findByTenantIdAndEmail(tenantId, request.getEmail())
                 .ifPresent(u -> {
                     if (!u.getId().equals(currentUserId)) {
                         throw new DuplicateEmailException("User with email " + request.getEmail() + " already exists");
@@ -369,6 +412,45 @@ public class EmployeeService {
 
         Employee employee = employeeRepository.findByTenantIdAndId(tenantId, id)
             .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
+
+        // Get the user associated with this employee
+        Long userId = employee.getUserId();
+        if (userId != null) {
+            // Check if this user is the primary owner of the tenant
+            Tenant tenant = tenantRepository.findById(tenantId)
+                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+
+            if (userId.equals(tenant.getPrimaryOwnerUserId())) {
+                throw new TenantOwnerDeletionException(
+                    "Cannot delete the primary owner of the tenant. " +
+                    "The primary owner is the account that created and owns the subscription. " +
+                    "To close your account, please contact support."
+                );
+            }
+
+            // Check if this is the last tenant admin
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null && user.getRoles() != null) {
+                boolean isTenantAdmin = user.getRoles().stream()
+                    .anyMatch(role -> "TENANT_ADMIN".equals(role.getName()));
+
+                if (isTenantAdmin) {
+                    // Count total tenant admins
+                    long tenantAdminCount = userRepository.findByTenantId(tenantId).stream()
+                        .filter(u -> u.getRoles() != null && u.getRoles().stream()
+                            .anyMatch(r -> "TENANT_ADMIN".equals(r.getName())))
+                        .count();
+
+                    if (tenantAdminCount <= 1) {
+                        throw new LastTenantAdminException(
+                            "Cannot delete the last tenant administrator. " +
+                            "At least one tenant admin must exist to manage the organization. " +
+                            "Please assign another user as admin before deleting this account."
+                        );
+                    }
+                }
+            }
+        }
 
         employeeRepository.delete(employee);
     }

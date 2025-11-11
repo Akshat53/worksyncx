@@ -5,10 +5,14 @@ import com.worksyncx.hrms.dto.attendance.AttendanceRequest;
 import com.worksyncx.hrms.dto.attendance.AttendanceResponse;
 import com.worksyncx.hrms.dto.attendance.CheckInRequest;
 import com.worksyncx.hrms.dto.attendance.CheckOutRequest;
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.service.attendance.AttendanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -141,6 +145,65 @@ public class AttendanceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Failed to update attendance", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/employee/{employeeId}/page")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
+    public ResponseEntity<?> getEmployeeAttendancePaginated(
+        @PathVariable Long employeeId,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "attendanceDate") String sortBy,
+        @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<AttendanceResponse> recordsPage = attendanceService
+                .getEmployeeAttendancePaginated(employeeId, startDate, endDate, pageable);
+
+            return ResponseEntity.ok(recordsPage);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get attendance records", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/date/{date}/page")
+    @RequiresModule(Module.ATTENDANCE)
+    @PreAuthorize("hasAuthority('ATTENDANCE:READ')")
+    public ResponseEntity<?> getAttendanceByDatePaginated(
+        @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "ASC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<AttendanceResponse> recordsPage = attendanceService
+                .getAttendanceByDatePaginated(date, pageable);
+
+            return ResponseEntity.ok(recordsPage);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get attendance for date", "message", e.getMessage()));
         }
     }
 }

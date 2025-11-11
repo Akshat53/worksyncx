@@ -1,6 +1,7 @@
 package com.worksyncx.hrms.controller;
 
 import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.payroll.PayrollCycleRequest;
 import com.worksyncx.hrms.dto.payroll.PayrollCycleResponse;
 import com.worksyncx.hrms.dto.payroll.PayrollRequest;
@@ -9,6 +10,9 @@ import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.service.payroll.PayrollService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -82,6 +86,32 @@ public class PayrollController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Failed to delete payroll cycle", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/cycles/page")
+    @RequiresModule(Module.PAYROLL)
+    public ResponseEntity<?> getAllPayrollCyclesPaginated(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<PayrollCycleResponse> cyclesPage = payrollService.getAllPayrollCyclesPaginated(pageable);
+
+            return ResponseEntity.ok(cyclesPage);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get payroll cycles", "message", e.getMessage()));
         }
     }
 
@@ -175,6 +205,42 @@ public class PayrollController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", "Failed to delete payroll", "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/page")
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
+    public ResponseEntity<?> getAllPayrollsPaginated(
+        @RequestParam(required = false) Long cycleId,
+        @RequestParam(required = false) Long employeeId,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size,
+        @RequestParam(defaultValue = "id") String sortBy,
+        @RequestParam(defaultValue = "DESC") String sortDirection
+    ) {
+        try {
+            // Create sort object
+            Sort sort = sortDirection.equalsIgnoreCase("DESC")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+            // Create pageable object
+            Pageable pageable = PageRequest.of(page, size, sort);
+
+            PageResponse<PayrollResponse> payrollsPage;
+
+            if (cycleId != null) {
+                payrollsPage = payrollService.getPayrollsByCyclePaginated(cycleId, pageable);
+            } else if (employeeId != null) {
+                payrollsPage = payrollService.getPayrollsByEmployeePaginated(employeeId, pageable);
+            } else {
+                payrollsPage = payrollService.getAllPayrollsPaginated(pageable);
+            }
+
+            return ResponseEntity.ok(payrollsPage);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "Failed to get payrolls", "message", e.getMessage()));
         }
     }
 }

@@ -9,6 +9,7 @@ import com.worksyncx.hrms.dto.auth.RegisterRequest;
 import com.worksyncx.hrms.entity.Department;
 import com.worksyncx.hrms.entity.Designation;
 import com.worksyncx.hrms.entity.Employee;
+import com.worksyncx.hrms.entity.Permission;
 import com.worksyncx.hrms.entity.Role;
 import com.worksyncx.hrms.entity.Subscription;
 import com.worksyncx.hrms.entity.Tenant;
@@ -21,7 +22,9 @@ import com.worksyncx.hrms.enums.SubscriptionStatus;
 import com.worksyncx.hrms.repository.DepartmentRepository;
 import com.worksyncx.hrms.repository.DesignationRepository;
 import com.worksyncx.hrms.repository.EmployeeRepository;
+import com.worksyncx.hrms.repository.PermissionRepository;
 import com.worksyncx.hrms.repository.RoleRepository;
+import com.worksyncx.hrms.repository.SubscriptionRepository;
 import com.worksyncx.hrms.repository.TenantRepository;
 import com.worksyncx.hrms.repository.UserRepository;
 import com.worksyncx.hrms.security.jwt.JwtUtils;
@@ -72,6 +75,12 @@ public class AuthService {
     @Autowired
     private EmployeeRepository employeeRepository;
 
+    @Autowired
+    private PermissionRepository permissionRepository;
+
+    @Autowired
+    private SubscriptionRepository subscriptionRepository;
+
     public AuthResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
@@ -83,6 +92,11 @@ public class AuthService {
         User user = (User) authentication.getPrincipal();
         List<AuthRoleDto> roleDtos = convertRolesToDtos(user.getRoles());
 
+        // Fetch subscription modules for the user's tenant
+        Set<String> subscriptionModules = subscriptionRepository.findByTenantId(user.getTenantId())
+            .map(Subscription::getModules)
+            .orElse(new HashSet<>());
+
         return new AuthResponse(
             jwt,
             user.getId(),
@@ -91,7 +105,8 @@ public class AuthService {
             user.getFirstName(),
             user.getLastName(),
             roleDtos,
-            user.getMustChangePassword()
+            user.getMustChangePassword(),
+            subscriptionModules
         );
     }
 
@@ -140,6 +155,9 @@ public class AuthService {
         user.setLastName(request.getLastName());
         user.setIsActive(true);
 
+        // Get subscription modules for permission filtering
+        final Set<String> enabledModules = tenant.getSubscription().getModules();
+
         // Assign TENANT_ADMIN role
         Role adminRole = roleRepository.findByTenantIdAndName(tenantId, "TENANT_ADMIN")
             .orElseGet(() -> {
@@ -148,12 +166,33 @@ public class AuthService {
                 newRole.setName("TENANT_ADMIN");
                 newRole.setDescription("Tenant Administrator");
                 newRole.setIsSystemRole(true);
+
+                // Assign permissions based on subscription modules
+                List<Permission> allPermissions = permissionRepository.findAll();
+
+                // Filter permissions to only include those for enabled modules
+                // Also include ROLE, PERMISSION, and SUBSCRIPTION modules for admin capabilities
+                Set<Permission> allowedPermissions = allPermissions.stream()
+                    .filter(permission ->
+                        enabledModules.contains(permission.getModule()) ||
+                        "ROLE".equals(permission.getModule()) ||
+                        "PERMISSION".equals(permission.getModule()) ||
+                        "SUBSCRIPTION".equals(permission.getModule())
+                    )
+                    .collect(Collectors.toSet());
+
+                newRole.setPermissions(allowedPermissions);
+
                 return roleRepository.save(newRole);
             });
 
         user.setRoles(Set.of(adminRole));
         user = userRepository.save(user);
         final Long userId = user.getId();
+
+        // Set this user as the primary owner of the tenant (cannot be deleted)
+        tenant.setPrimaryOwnerUserId(userId);
+        tenantRepository.save(tenant);
 
         // Create default department if none exists
         Department department = departmentRepository.findByTenantIdAndCode(tenantId, "ADMIN")
@@ -214,6 +253,11 @@ public class AuthService {
         User updatedUser = (User) authentication.getPrincipal();
         List<AuthRoleDto> roleDtos = convertRolesToDtos(updatedUser.getRoles());
 
+        // Fetch subscription modules for the newly created tenant
+        Set<String> subscriptionModules = subscriptionRepository.findByTenantId(user.getTenantId())
+            .map(Subscription::getModules)
+            .orElse(new HashSet<>());
+
         return new AuthResponse(
             jwt,
             user.getId(),
@@ -222,7 +266,8 @@ public class AuthService {
             user.getFirstName(),
             user.getLastName(),
             roleDtos,
-            false // Admin doesn't need to change password
+            false, // Admin doesn't need to change password
+            subscriptionModules
         );
     }
 

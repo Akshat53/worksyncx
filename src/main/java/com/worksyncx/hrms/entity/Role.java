@@ -29,7 +29,7 @@ public class Role extends BaseEntity {
     @Column(name = "is_system_role", nullable = false)
     private Boolean isSystemRole = false;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "role_permissions",
         joinColumns = @JoinColumn(name = "role_id"),

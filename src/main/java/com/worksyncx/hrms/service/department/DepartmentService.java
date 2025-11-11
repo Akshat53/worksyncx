@@ -1,11 +1,16 @@
 package com.worksyncx.hrms.service.department;
 
+import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.department.DepartmentRequest;
 import com.worksyncx.hrms.dto.department.DepartmentResponse;
 import com.worksyncx.hrms.entity.Department;
+import com.worksyncx.hrms.exception.DepartmentNotFoundException;
+import com.worksyncx.hrms.exception.DuplicateDepartmentCodeException;
 import com.worksyncx.hrms.repository.DepartmentRepository;
 import com.worksyncx.hrms.security.TenantContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +30,7 @@ public class DepartmentService {
         // Check if code already exists
         departmentRepository.findByTenantIdAndCode(tenantId, request.getCode())
             .ifPresent(dept -> {
-                throw new RuntimeException("Department with code " + request.getCode() + " already exists");
+                throw new DuplicateDepartmentCodeException("A department with code '" + request.getCode() + "' already exists for your organization");
             });
 
         Department department = new Department();
@@ -64,7 +69,7 @@ public class DepartmentService {
     public DepartmentResponse getDepartmentById(Long id) {
         Long tenantId = TenantContext.getTenantId();
         Department department = departmentRepository.findByTenantIdAndId(tenantId, id)
-            .orElseThrow(() -> new RuntimeException("Department not found with id: " + id));
+            .orElseThrow(() -> new DepartmentNotFoundException("Department not found with id: " + id));
         return mapToResponse(department);
     }
 
@@ -73,13 +78,13 @@ public class DepartmentService {
         Long tenantId = TenantContext.getTenantId();
 
         Department department = departmentRepository.findByTenantIdAndId(tenantId, id)
-            .orElseThrow(() -> new RuntimeException("Department not found with id: " + id));
+            .orElseThrow(() -> new DepartmentNotFoundException("Department not found with id: " + id));
 
         // Check if code is being changed and if new code already exists
         if (!department.getCode().equals(request.getCode())) {
             departmentRepository.findByTenantIdAndCode(tenantId, request.getCode())
                 .ifPresent(dept -> {
-                    throw new RuntimeException("Department with code " + request.getCode() + " already exists");
+                    throw new DuplicateDepartmentCodeException("A department with code '" + request.getCode() + "' already exists for your organization");
                 });
         }
 
@@ -100,9 +105,45 @@ public class DepartmentService {
         Long tenantId = TenantContext.getTenantId();
 
         Department department = departmentRepository.findByTenantIdAndId(tenantId, id)
-            .orElseThrow(() -> new RuntimeException("Department not found with id: " + id));
+            .orElseThrow(() -> new DepartmentNotFoundException("Department not found with id: " + id));
 
         departmentRepository.delete(department);
+    }
+
+    // Paginated methods
+    @Transactional(readOnly = true)
+    public PageResponse<DepartmentResponse> getAllDepartmentsPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Department> departmentPage = departmentRepository.findByTenantId(tenantId, pageable);
+        return mapToPageResponse(departmentPage);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<DepartmentResponse> getActiveDepartmentsPaginated(Pageable pageable) {
+        Long tenantId = TenantContext.getTenantId();
+        Page<Department> departmentPage = departmentRepository.findByTenantIdAndIsActiveTrue(tenantId, pageable);
+        return mapToPageResponse(departmentPage);
+    }
+
+    private PageResponse<DepartmentResponse> mapToPageResponse(Page<Department> page) {
+        List<DepartmentResponse> content = page.getContent()
+            .stream()
+            .map(this::mapToResponse)
+            .collect(Collectors.toList());
+
+        return PageResponse.<DepartmentResponse>builder()
+            .content(content)
+            .pageNumber(page.getNumber())
+            .pageSize(page.getSize())
+            .totalElements(page.getTotalElements())
+            .totalPages(page.getTotalPages())
+            .first(page.isFirst())
+            .last(page.isLast())
+            .hasNext(page.hasNext())
+            .hasPrevious(page.hasPrevious())
+            .numberOfElements(page.getNumberOfElements())
+            .empty(page.isEmpty())
+            .build();
     }
 
     private DepartmentResponse mapToResponse(Department department) {

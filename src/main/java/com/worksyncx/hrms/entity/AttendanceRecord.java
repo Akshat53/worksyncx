@@ -49,4 +49,20 @@ public class AttendanceRecord extends BaseEntity {
 
     @Column(name = "marked_by")
     private Long markedBy;
+
+    // Shift-related fields
+    @Column(name = "shift_id")
+    private Long shiftId;
+
+    @Column(name = "expected_start_time")
+    private LocalTime expectedStartTime;
+
+    @Column(name = "expected_end_time")
+    private LocalTime expectedEndTime;
+
+    @Column(name = "late_by_minutes")
+    private Integer lateByMinutes = 0;
+
+    @Column(name = "early_leave_by_minutes")
+    private Integer earlyLeaveByMinutes = 0;
 }

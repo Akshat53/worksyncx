@@ -1,0 +1,17 @@
+package com.worksyncx.hrms.repository;
+
+import com.worksyncx.hrms.entity.Document;
+import com.worksyncx.hrms.enums.DocumentType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface DocumentRepository extends JpaRepository<Document, Long> {
+    List<Document> findByTenantId(Long tenantId);
+    List<Document> findByTenantIdAndEmployeeId(Long tenantId, Long employeeId);
+    List<Document> findByTenantIdAndEmployeeIdAndDocumentType(Long tenantId, Long employeeId, DocumentType documentType);
+    Optional<Document> findByTenantIdAndId(Long tenantId, Long id);
+}
