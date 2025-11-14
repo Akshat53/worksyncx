@@ -1,10 +1,12 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
 import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.employee.EmployeeRequest;
 import com.worksyncx.hrms.dto.employee.EmployeeResponse;
 import com.worksyncx.hrms.entity.User;
 import com.worksyncx.hrms.enums.EmploymentStatus;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.service.employee.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class EmployeeController {
 
     // Admin-only endpoints
     @PostMapping
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:CREATE')")
     public ResponseEntity<?> createEmployee(@Valid @RequestBody EmployeeRequest request) {
         try {
@@ -43,6 +46,7 @@ public class EmployeeController {
     }
 
     @GetMapping
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<List<EmployeeResponse>> getAllEmployees(
         @RequestParam(required = false) String status,
@@ -67,6 +71,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/page")
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<PageResponse<EmployeeResponse>> getAllEmployeesPaginated(
         @RequestParam(required = false) String status,
@@ -103,6 +108,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/{id}")
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<?> getEmployeeById(@PathVariable Long id) {
         try {
@@ -115,6 +121,7 @@ public class EmployeeController {
     }
 
     @GetMapping("/code/{employeeCode}")
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:READ')")
     public ResponseEntity<?> getEmployeeByCode(@PathVariable String employeeCode) {
         try {
@@ -127,6 +134,7 @@ public class EmployeeController {
     }
 
     @PutMapping("/{id}")
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:UPDATE')")
     public ResponseEntity<?> updateEmployee(
         @PathVariable Long id,
@@ -142,6 +150,7 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
+    @RequiresModule(Module.EMPLOYEES)
     @PreAuthorize("hasAuthority('EMPLOYEE:DELETE')")
     public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         try {

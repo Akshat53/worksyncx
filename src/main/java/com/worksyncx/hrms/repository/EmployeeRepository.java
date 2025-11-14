@@ -35,4 +35,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     Page<Employee> findByTenantId(Long tenantId, Pageable pageable);
     Page<Employee> findByTenantIdAndEmploymentStatus(Long tenantId, EmploymentStatus status, Pageable pageable);
     Page<Employee> findByTenantIdAndDepartmentId(Long tenantId, Long departmentId, Pageable pageable);
+
+    // Manager relationship methods
+    List<Employee> findByTenantIdAndManagerId(Long tenantId, Long managerId);
+
+    @Query("SELECT COUNT(e) FROM Employee e WHERE e.tenantId = :tenantId AND e.managerId = :managerId")
+    long countByTenantIdAndManagerId(@Param("tenantId") Long tenantId, @Param("managerId") Long managerId);
 }

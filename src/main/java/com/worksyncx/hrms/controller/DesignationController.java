@@ -1,7 +1,13 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.common.PageResponse;
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.designation.DesignationRequest;
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.designation.DesignationResponse;
 import com.worksyncx.hrms.service.designation.DesignationService;
 import jakarta.validation.Valid;
@@ -26,6 +32,7 @@ public class DesignationController {
     private final DesignationService designationService;
 
     @PostMapping
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:CREATE')")
     public ResponseEntity<?> createDesignation(@Valid @RequestBody DesignationRequest request) {
         try {
@@ -38,6 +45,7 @@ public class DesignationController {
     }
 
     @GetMapping
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:READ')")
     public ResponseEntity<List<DesignationResponse>> getAllDesignations(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
@@ -57,6 +65,7 @@ public class DesignationController {
     }
 
     @GetMapping("/page")
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:READ')")
     public ResponseEntity<PageResponse<DesignationResponse>> getAllDesignationsPaginated(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
@@ -87,6 +96,7 @@ public class DesignationController {
     }
 
     @GetMapping("/{id}")
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:READ')")
     public ResponseEntity<?> getDesignationById(@PathVariable Long id) {
         try {
@@ -99,6 +109,7 @@ public class DesignationController {
     }
 
     @PutMapping("/{id}")
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:UPDATE')")
     public ResponseEntity<?> updateDesignation(
         @PathVariable Long id,
@@ -114,6 +125,7 @@ public class DesignationController {
     }
 
     @DeleteMapping("/{id}")
+    @RequiresModule(Module.DESIGNATIONS)
     @PreAuthorize("hasAuthority('DESIGNATION:DELETE')")
     public ResponseEntity<?> deleteDesignation(@PathVariable Long id) {
         try {

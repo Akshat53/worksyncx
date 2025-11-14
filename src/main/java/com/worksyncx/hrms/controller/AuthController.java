@@ -1,6 +1,8 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.dto.auth.AuthPermissionDto;
 import com.worksyncx.hrms.dto.auth.AuthResponse;
+import com.worksyncx.hrms.dto.auth.AuthRoleDto;
 import com.worksyncx.hrms.dto.auth.ChangePasswordRequest;
 import com.worksyncx.hrms.dto.auth.LoginRequest;
 import com.worksyncx.hrms.dto.auth.RegisterRequest;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -61,6 +64,30 @@ public class AuthController {
 
         User user = (User) authentication.getPrincipal();
 
+        // Convert roles to AuthRoleDto with permissions (same format as login response)
+        var roleDtos = user.getRoles().stream()
+            .map(role -> {
+                var permissionDtos = role.getPermissions().stream()
+                    .map(permission -> {
+                        var dto = new AuthPermissionDto();
+                        dto.setId(permission.getId());
+                        dto.setCode(permission.getCode());
+                        dto.setName(permission.getName());
+                        dto.setModule(permission.getModule());
+                        dto.setAction(permission.getAction());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+
+                var roleDto = new AuthRoleDto();
+                roleDto.setId(role.getId());
+                roleDto.setName(role.getName());
+                roleDto.setDescription(role.getDescription());
+                roleDto.setPermissions(permissionDtos);
+                return roleDto;
+            })
+            .collect(Collectors.toList());
+
         Map<String, Object> response = new HashMap<>();
         response.put("id", user.getId());
         response.put("tenantId", user.getTenantId());
@@ -68,9 +95,7 @@ public class AuthController {
         response.put("firstName", user.getFirstName());
         response.put("lastName", user.getLastName());
         response.put("isActive", user.getIsActive());
-        response.put("roles", user.getRoles().stream()
-            .map(role -> role.getName())
-            .toList());
+        response.put("roles", roleDtos);  // Now returns full role objects with permissions
 
         return ResponseEntity.ok(response);
     }

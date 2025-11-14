@@ -10,6 +10,7 @@ import com.worksyncx.hrms.entity.Permission;
 import com.worksyncx.hrms.entity.Role;
 import com.worksyncx.hrms.repository.PermissionRepository;
 import com.worksyncx.hrms.repository.RoleRepository;
+import com.worksyncx.hrms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -29,6 +30,7 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public RoleResponse createRole(RoleRequest request) {
@@ -110,7 +112,17 @@ public class RoleService {
             throw new RuntimeException("System roles cannot be deleted");
         }
 
-        // TODO: Add check to prevent deletion if users are assigned to this role
+        // Check if role is assigned to any users
+        long userCount = role.getId() != null ?
+            userRepository.countUsersWithRole(role.getId()) : 0;
+
+        if (userCount > 0) {
+            throw new RuntimeException(
+                "Cannot delete role '" + role.getName() +
+                "' as it is currently assigned to " + userCount + " user(s). " +
+                "Please remove it from all users before deleting."
+            );
+        }
 
         roleRepository.delete(role);
         log.info("Deleted role: {} for tenant: {}", role.getName(), tenantId);

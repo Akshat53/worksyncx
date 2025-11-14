@@ -1,7 +1,13 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.common.PageResponse;
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.department.DepartmentRequest;
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.department.DepartmentResponse;
 import com.worksyncx.hrms.service.department.DepartmentService;
 import jakarta.validation.Valid;
@@ -26,6 +32,7 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @PostMapping
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:CREATE')")
     public ResponseEntity<?> createDepartment(@Valid @RequestBody DepartmentRequest request) {
         try {
@@ -38,6 +45,7 @@ public class DepartmentController {
     }
 
     @GetMapping
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     public ResponseEntity<List<DepartmentResponse>> getAllDepartments(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly
@@ -49,6 +57,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/page")
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     public ResponseEntity<PageResponse<DepartmentResponse>> getAllDepartmentsPaginated(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly,
@@ -73,6 +82,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/{id}")
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:READ')")
     public ResponseEntity<?> getDepartmentById(@PathVariable Long id) {
         try {
@@ -85,6 +95,7 @@ public class DepartmentController {
     }
 
     @PutMapping("/{id}")
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:UPDATE')")
     public ResponseEntity<?> updateDepartment(
         @PathVariable Long id,
@@ -100,6 +111,7 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{id}")
+    @RequiresModule(Module.DEPARTMENTS)
     @PreAuthorize("hasAuthority('DEPARTMENT:DELETE')")
     public ResponseEntity<?> deleteDepartment(@PathVariable Long id) {
         try {

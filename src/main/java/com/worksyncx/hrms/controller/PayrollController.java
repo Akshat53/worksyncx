@@ -33,6 +33,7 @@ public class PayrollController {
 
     @PostMapping("/cycles")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:CREATE')")
     public ResponseEntity<?> createPayrollCycle(@Valid @RequestBody PayrollCycleRequest request) {
         try {
             PayrollCycleResponse response = payrollService.createPayrollCycle(request);
@@ -45,6 +46,7 @@ public class PayrollController {
 
     @GetMapping("/cycles")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:READ')")
     public ResponseEntity<List<PayrollCycleResponse>> getAllPayrollCycles() {
         List<PayrollCycleResponse> cycles = payrollService.getAllPayrollCycles();
         return ResponseEntity.ok(cycles);
@@ -52,6 +54,7 @@ public class PayrollController {
 
     @GetMapping("/cycles/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:READ')")
     public ResponseEntity<?> getPayrollCycleById(@PathVariable Long id) {
         try {
             PayrollCycleResponse response = payrollService.getPayrollCycleById(id);
@@ -64,6 +67,7 @@ public class PayrollController {
 
     @PutMapping("/cycles/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:UPDATE')")
     public ResponseEntity<?> updatePayrollCycle(
         @PathVariable Long id,
         @Valid @RequestBody PayrollCycleRequest request
@@ -79,6 +83,7 @@ public class PayrollController {
 
     @DeleteMapping("/cycles/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:DELETE')")
     public ResponseEntity<?> deletePayrollCycle(@PathVariable Long id) {
         try {
             payrollService.deletePayrollCycle(id);
@@ -91,6 +96,7 @@ public class PayrollController {
 
     @GetMapping("/cycles/page")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:READ')")
     public ResponseEntity<?> getAllPayrollCyclesPaginated(
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "10") int size,
@@ -119,6 +125,7 @@ public class PayrollController {
 
     @PostMapping
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:CREATE')")
     public ResponseEntity<?> createPayroll(@Valid @RequestBody PayrollRequest request) {
         try {
             PayrollResponse response = payrollService.createPayroll(request);
@@ -155,6 +162,7 @@ public class PayrollController {
 
     @GetMapping("/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE', 'PAYROLL:READ')")
     public ResponseEntity<?> getPayrollById(@PathVariable Long id) {
         try {
             PayrollResponse response = payrollService.getPayrollById(id);
@@ -167,6 +175,7 @@ public class PayrollController {
 
     @PutMapping("/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:UPDATE')")
     public ResponseEntity<?> updatePayroll(
         @PathVariable Long id,
         @Valid @RequestBody PayrollRequest request
@@ -182,6 +191,7 @@ public class PayrollController {
 
     @PostMapping("/{id}/mark-paid")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:UPDATE')")
     public ResponseEntity<?> markAsPaid(
         @PathVariable Long id,
         @RequestBody(required = false) Map<String, String> body
@@ -198,6 +208,7 @@ public class PayrollController {
 
     @DeleteMapping("/{id}")
     @RequiresModule(Module.PAYROLL)
+    @PreAuthorize("hasAuthority('PAYROLL:DELETE')")
     public ResponseEntity<?> deletePayroll(@PathVariable Long id) {
         try {
             payrollService.deletePayroll(id);

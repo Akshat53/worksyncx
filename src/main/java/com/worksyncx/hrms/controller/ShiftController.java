@@ -1,6 +1,10 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.common.PageResponse;
+import com.worksyncx.hrms.annotation.RequiresModule;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.dto.shift.*;
 import com.worksyncx.hrms.service.shift.ShiftService;
 import jakarta.validation.Valid;
@@ -25,6 +29,7 @@ public class ShiftController {
     private final ShiftService shiftService;
 
     @PostMapping
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:CREATE')")
     public ResponseEntity<ShiftResponse> createShift(@Valid @RequestBody ShiftRequest request) {
         ShiftResponse response = shiftService.createShift(request);
@@ -32,6 +37,7 @@ public class ShiftController {
     }
 
     @GetMapping
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<List<ShiftResponse>> getAllShifts() {
         List<ShiftResponse> shifts = shiftService.getAllShifts();
@@ -39,6 +45,7 @@ public class ShiftController {
     }
 
     @GetMapping("/active")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<List<ShiftResponse>> getActiveShifts() {
         List<ShiftResponse> shifts = shiftService.getActiveShifts();
@@ -46,6 +53,7 @@ public class ShiftController {
     }
 
     @GetMapping("/{id}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<ShiftResponse> getShiftById(@PathVariable Long id) {
         ShiftResponse shift = shiftService.getShiftById(id);
@@ -53,6 +61,7 @@ public class ShiftController {
     }
 
     @PutMapping("/{id}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:UPDATE')")
     public ResponseEntity<ShiftResponse> updateShift(
             @PathVariable Long id,
@@ -62,6 +71,7 @@ public class ShiftController {
     }
 
     @DeleteMapping("/{id}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:DELETE')")
     public ResponseEntity<Void> deleteShift(@PathVariable Long id) {
         shiftService.deleteShift(id);
@@ -70,6 +80,7 @@ public class ShiftController {
 
     // Employee Shift Assignments
     @PostMapping("/assignments")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:ASSIGN')")
     public ResponseEntity<EmployeeShiftResponse> assignShift(@Valid @RequestBody AssignShiftRequest request) {
         EmployeeShiftResponse response = shiftService.assignShiftToEmployee(request);
@@ -77,6 +88,7 @@ public class ShiftController {
     }
 
     @GetMapping("/assignments/employee/{employeeId}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<List<EmployeeShiftResponse>> getEmployeeShifts(@PathVariable Long employeeId) {
         List<EmployeeShiftResponse> shifts = shiftService.getEmployeeShifts(employeeId);
@@ -84,6 +96,7 @@ public class ShiftController {
     }
 
     @PutMapping("/assignments/{id}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:ASSIGN')")
     public ResponseEntity<EmployeeShiftResponse> updateShiftAssignment(
             @PathVariable Long id,
@@ -93,6 +106,7 @@ public class ShiftController {
     }
 
     @DeleteMapping("/assignments/{id}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:ASSIGN')")
     public ResponseEntity<Void> deleteShiftAssignment(@PathVariable Long id) {
         shiftService.deleteShiftAssignment(id);
@@ -100,6 +114,7 @@ public class ShiftController {
     }
 
     @GetMapping("/{shiftId}/employees")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'SHIFT:READ')")
     public ResponseEntity<List<EmployeeShiftResponse>> getEmployeesOnShift(
             @PathVariable Long shiftId,
@@ -111,6 +126,7 @@ public class ShiftController {
 
     // Shift detection endpoints for attendance system
     @GetMapping("/employee/{employeeId}/current")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<ShiftResponse> getCurrentShift(@PathVariable Long employeeId) {
         return shiftService.getCurrentShiftForEmployee(employeeId)
@@ -119,6 +135,7 @@ public class ShiftController {
     }
 
     @GetMapping("/employee/{employeeId}/date/{date}")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<ShiftResponse> getShiftForDate(
             @PathVariable Long employeeId,
@@ -129,6 +146,7 @@ public class ShiftController {
     }
 
     @GetMapping("/page")
+    @RequiresModule(Module.SHIFTS)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER', 'ROLE_EMPLOYEE', 'SHIFT:READ')")
     public ResponseEntity<PageResponse<ShiftResponse>> getAllShiftsPaginated(
             @RequestParam(required = false) Boolean active,

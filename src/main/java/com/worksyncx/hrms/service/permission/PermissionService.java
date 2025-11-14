@@ -153,8 +153,17 @@ public class PermissionService {
         Permission permission = permissionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Permission not found with ID: " + id));
 
-        // Note: You might want to add a check here to prevent deletion of permissions
-        // that are currently assigned to roles
+        // Check if permission is assigned to any roles
+        long roleCount = permission.getId() != null ?
+            permissionRepository.countRolesUsingPermission(permission.getId()) : 0;
+
+        if (roleCount > 0) {
+            throw new RuntimeException(
+                "Cannot delete permission '" + permission.getCode() +
+                "' as it is currently assigned to " + roleCount + " role(s). " +
+                "Please remove it from all roles before deleting."
+            );
+        }
 
         permissionRepository.delete(permission);
         log.info("Deleted permission: {}", permission.getCode());
@@ -164,17 +173,22 @@ public class PermissionService {
      * Maps subscription module names to permission module names.
      * Subscription modules use plural/descriptive names (e.g., DEPARTMENTS, LEAVE_MANAGEMENT)
      * Permission modules use singular names (e.g., DEPARTMENT, LEAVE)
+     * Case-insensitive to handle legacy lowercase module names.
      */
     private String mapSubscriptionModuleToPermissionModule(String subscriptionModule) {
-        return switch (subscriptionModule) {
+        // Convert to uppercase for consistent matching
+        String upperModule = subscriptionModule.toUpperCase();
+
+        return switch (upperModule) {
             case "DEPARTMENTS" -> "DEPARTMENT";
             case "DESIGNATIONS" -> "DESIGNATION";
-            case "EMPLOYEES" -> "EMPLOYEE";
-            case "LEAVE_MANAGEMENT" -> "LEAVE";
-            case "SHIFTS" -> "SHIFT";
+            case "EMPLOYEES", "EMPLOYEE" -> "EMPLOYEE";  // Support both forms
+            case "LEAVE_MANAGEMENT", "LEAVE" -> "LEAVE";  // Support both forms
+            case "SHIFTS", "SHIFT" -> "SHIFT";  // Support both forms
             case "ATTENDANCE" -> "ATTENDANCE";
             case "PAYROLL" -> "PAYROLL";
-            default -> subscriptionModule; // Return as-is if no mapping exists
+            case "REPORTS" -> "REPORTS";
+            default -> upperModule; // Return uppercase version if no mapping exists
         };
     }
 

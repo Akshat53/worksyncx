@@ -28,11 +28,13 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_TENANT_ADMIN')")
     public User createUser(@RequestBody UserRequest request) {
         return userService.createUser(request);
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_TENANT_ADMIN')")
     public List<User> getAll() {
         return userService.getAllUsers();
     }

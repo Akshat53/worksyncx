@@ -7,5 +7,6 @@ public enum Module {
     ATTENDANCE,
     LEAVE_MANAGEMENT,
     PAYROLL,
+    SHIFTS,
     REPORTS
 }

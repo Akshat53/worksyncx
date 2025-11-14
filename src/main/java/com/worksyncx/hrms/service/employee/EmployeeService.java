@@ -413,6 +413,25 @@ public class EmployeeService {
         Employee employee = employeeRepository.findByTenantIdAndId(tenantId, id)
             .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
 
+        // Check if this employee is a manager of other employees
+        long subordinateCount = employeeRepository.countByTenantIdAndManagerId(tenantId, id);
+        if (subordinateCount > 0) {
+            List<Employee> subordinates = employeeRepository.findByTenantIdAndManagerId(tenantId, id);
+            String subordinateNames = subordinates.stream()
+                .limit(3)
+                .map(e -> e.getFirstName() + " " + e.getLastName())
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("");
+
+            String message = String.format(
+                "Cannot delete this employee as they are currently managing %d employee(s)%s. " +
+                "Please reassign these employees to another manager before deletion.",
+                subordinateCount,
+                subordinateCount > 3 ? " (showing first 3: " + subordinateNames + "...)" : " (" + subordinateNames + ")"
+            );
+            throw new EmployeeHasSubordinatesException(message);
+        }
+
         // Get the user associated with this employee
         Long userId = employee.getUserId();
         if (userId != null) {

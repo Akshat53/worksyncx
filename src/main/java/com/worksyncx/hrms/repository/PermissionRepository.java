@@ -2,6 +2,8 @@ package com.worksyncx.hrms.repository;
 
 import com.worksyncx.hrms.entity.Permission;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -17,4 +19,7 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     List<Permission> findByModule(String module);
 
     List<Permission> findByModuleAndAction(String module, String action);
+
+    @Query("SELECT COUNT(r) FROM Role r JOIN r.permissions p WHERE p.id = :permissionId")
+    long countRolesUsingPermission(@Param("permissionId") Long permissionId);
 }

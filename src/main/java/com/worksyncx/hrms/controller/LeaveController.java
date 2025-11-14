@@ -1,8 +1,10 @@
 package com.worksyncx.hrms.controller;
 
+import com.worksyncx.hrms.annotation.RequiresModule;
 import com.worksyncx.hrms.dto.common.PageResponse;
 import com.worksyncx.hrms.dto.leave.*;
 import com.worksyncx.hrms.enums.LeaveStatus;
+import com.worksyncx.hrms.enums.Module;
 import com.worksyncx.hrms.service.leave.LeaveService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +30,8 @@ public class LeaveController {
     // ==================== Leave Type Endpoints ====================
 
     @PostMapping("/types")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:CREATE')")
     public ResponseEntity<?> createLeaveType(@Valid @RequestBody LeaveTypeRequest request) {
         try {
             LeaveTypeResponse response = leaveService.createLeaveType(request);
@@ -38,6 +43,8 @@ public class LeaveController {
     }
 
     @GetMapping("/types")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:READ')")
     public ResponseEntity<List<LeaveTypeResponse>> getAllLeaveTypes(
         @RequestParam(required = false, defaultValue = "false") boolean activeOnly
     ) {
@@ -48,6 +55,8 @@ public class LeaveController {
     }
 
     @GetMapping("/types/{id}")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:READ')")
     public ResponseEntity<?> getLeaveTypeById(@PathVariable Long id) {
         try {
             LeaveTypeResponse response = leaveService.getLeaveTypeById(id);
@@ -59,6 +68,8 @@ public class LeaveController {
     }
 
     @PutMapping("/types/{id}")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:UPDATE')")
     public ResponseEntity<?> updateLeaveType(
         @PathVariable Long id,
         @Valid @RequestBody LeaveTypeRequest request
@@ -73,6 +84,8 @@ public class LeaveController {
     }
 
     @DeleteMapping("/types/{id}")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:DELETE')")
     public ResponseEntity<?> deleteLeaveType(@PathVariable Long id) {
         try {
             leaveService.deleteLeaveType(id);
@@ -86,6 +99,8 @@ public class LeaveController {
     // ==================== Leave Request Endpoints ====================
 
     @PostMapping("/requests")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAnyAuthority('LEAVE:CREATE', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> createLeaveRequest(@Valid @RequestBody LeaveRequestDto request) {
         try {
             LeaveRequestResponse response = leaveService.createLeaveRequest(request);
@@ -97,6 +112,8 @@ public class LeaveController {
     }
 
     @GetMapping("/requests")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAnyAuthority('LEAVE:READ', 'ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER')")
     public ResponseEntity<?> getAllLeaveRequests(
         @RequestParam(required = false) Long employeeId,
         @RequestParam(required = false) String status
@@ -124,6 +141,8 @@ public class LeaveController {
     }
 
     @GetMapping("/requests/page")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAnyAuthority('LEAVE:READ', 'ROLE_TENANT_ADMIN', 'ROLE_HR_MANAGER')")
     public ResponseEntity<?> getAllLeaveRequestsPaginated(
         @RequestParam(required = false) Long employeeId,
         @RequestParam(required = false) String status,
@@ -163,6 +182,8 @@ public class LeaveController {
     }
 
     @GetMapping("/requests/{id}")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAnyAuthority('LEAVE:READ', 'ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getLeaveRequestById(@PathVariable Long id) {
         try {
             LeaveRequestResponse response = leaveService.getLeaveRequestById(id);
@@ -174,6 +195,8 @@ public class LeaveController {
     }
 
     @PostMapping("/requests/{id}/approve")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:APPROVE')")
     public ResponseEntity<?> approveLeaveRequest(
         @PathVariable Long id,
         @RequestBody LeaveApprovalRequest request
@@ -188,6 +211,8 @@ public class LeaveController {
     }
 
     @PostMapping("/requests/{id}/reject")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAuthority('LEAVE:REJECT')")
     public ResponseEntity<?> rejectLeaveRequest(
         @PathVariable Long id,
         @Valid @RequestBody LeaveRejectionRequest request
@@ -202,6 +227,8 @@ public class LeaveController {
     }
 
     @PostMapping("/requests/{id}/cancel")
+    @RequiresModule(Module.LEAVE_MANAGEMENT)
+    @PreAuthorize("hasAnyAuthority('LEAVE:UPDATE', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> cancelLeaveRequest(@PathVariable Long id) {
         try {
             LeaveRequestResponse response = leaveService.cancelLeaveRequest(id);

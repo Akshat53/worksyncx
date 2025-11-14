@@ -56,7 +56,23 @@ public class SubscriptionService {
         Subscription subscription = subscriptionRepository.findByTenantId(tenantId)
             .orElseThrow(() -> new RuntimeException("No subscription found for tenant"));
 
-        return subscription.getModules().contains(module);
+        // Check if subscription is active
+        if (!SubscriptionStatus.ACTIVE.equals(subscription.getStatus())) {
+            return false;
+        }
+
+        // Check expiration (null endDate means no expiration - for FREE plan)
+        if (subscription.getEndDate() != null &&
+            java.time.LocalDate.now().isAfter(subscription.getEndDate())) {
+            // Mark as expired
+            subscription.setStatus(SubscriptionStatus.EXPIRED);
+            subscriptionRepository.save(subscription);
+            return false;
+        }
+
+        // Case-insensitive check for backwards compatibility with old data
+        return subscription.getModules().stream()
+            .anyMatch(m -> m.equalsIgnoreCase(module));
     }
 
     @Transactional(readOnly = true)
@@ -111,8 +127,8 @@ public class SubscriptionService {
                 .monthlyPrice(new BigDecimal("29.00"))
                 .yearlyPrice(new BigDecimal("290.00"))
                 .maxEmployees(50)
-                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT"))
-                .features(Set.of("Everything in Free", "Time tracking", "Attendance management", "Leave approvals", "Basic reports"))
+                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "SHIFTS"))
+                .features(Set.of("Everything in Free", "Time tracking", "Attendance management", "Leave approvals", "Shift management", "Basic reports"))
                 .isPopular(false)
                 .build(),
             PlanDetailsResponse.builder()
@@ -122,7 +138,7 @@ public class SubscriptionService {
                 .monthlyPrice(new BigDecimal("79.00"))
                 .yearlyPrice(new BigDecimal("790.00"))
                 .maxEmployees(200)
-                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL"))
+                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "SHIFTS"))
                 .features(Set.of("Everything in Starter", "Payroll processing", "Salary management", "Advanced reports", "Priority support"))
                 .isPopular(true)
                 .build(),
@@ -133,7 +149,7 @@ public class SubscriptionService {
                 .monthlyPrice(null)
                 .yearlyPrice(null)
                 .maxEmployees(null)
-                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "REPORTS"))
+                .modules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "SHIFTS", "REPORTS"))
                 .features(Set.of("Everything in Professional", "Custom modules", "SSO integration", "Dedicated support", "Custom integrations", "SLA guarantee"))
                 .isPopular(false)
                 .build()
@@ -200,15 +216,15 @@ public class SubscriptionService {
             }
             case STARTER -> {
                 subscription.setMaxEmployees(50);
-                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT"));
-                subscription.setFeatures(Set.of("Everything in Free", "Time tracking", "Leave management"));
+                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "SHIFTS"));
+                subscription.setFeatures(Set.of("Everything in Free", "Time tracking", "Leave management", "Shift management"));
                 subscription.setBillingCycle(com.worksyncx.hrms.enums.BillingCycle.valueOf(billingCycle));
                 subscription.setAmount("MONTHLY".equals(billingCycle) ? new BigDecimal("29.00") : new BigDecimal("290.00"));
                 subscription.setEndDate(LocalDate.now().plusMonths("MONTHLY".equals(billingCycle) ? 1 : 12));
             }
             case PROFESSIONAL -> {
                 subscription.setMaxEmployees(200);
-                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL"));
+                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "SHIFTS"));
                 subscription.setFeatures(Set.of("Everything in Starter", "Payroll processing", "Advanced reports"));
                 subscription.setBillingCycle(com.worksyncx.hrms.enums.BillingCycle.valueOf(billingCycle));
                 subscription.setAmount("MONTHLY".equals(billingCycle) ? new BigDecimal("79.00") : new BigDecimal("790.00"));
@@ -216,7 +232,7 @@ public class SubscriptionService {
             }
             case ENTERPRISE -> {
                 subscription.setMaxEmployees(999999); // Unlimited
-                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "REPORTS"));
+                subscription.setModules(Set.of("DEPARTMENTS", "DESIGNATIONS", "EMPLOYEES", "ATTENDANCE", "LEAVE_MANAGEMENT", "PAYROLL", "SHIFTS", "REPORTS"));
                 subscription.setFeatures(Set.of("Everything in Professional", "Custom modules", "Dedicated support"));
                 subscription.setBillingCycle(com.worksyncx.hrms.enums.BillingCycle.ANNUAL);
                 subscription.setAmount(BigDecimal.ZERO); // Contact sales

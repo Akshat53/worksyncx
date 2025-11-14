@@ -32,6 +32,7 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping("/check-in/{employeeId}")
+    @RequiresModule(Module.ATTENDANCE)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> checkIn(
         @PathVariable Long employeeId,
@@ -47,6 +48,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/check-out/{employeeId}")
+    @RequiresModule(Module.ATTENDANCE)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> checkOut(
         @PathVariable Long employeeId,
@@ -75,6 +77,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/employee/{employeeId}")
+    @RequiresModule(Module.ATTENDANCE)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getEmployeeAttendance(
         @PathVariable Long employeeId,
@@ -91,6 +94,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/employee/{employeeId}/today")
+    @RequiresModule(Module.ATTENDANCE)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getTodayAttendance(@PathVariable Long employeeId) {
         try {
@@ -149,6 +153,7 @@ public class AttendanceController {
     }
 
     @GetMapping("/employee/{employeeId}/page")
+    @RequiresModule(Module.ATTENDANCE)
     @PreAuthorize("hasAnyAuthority('ROLE_TENANT_ADMIN', 'ROLE_EMPLOYEE')")
     public ResponseEntity<?> getEmployeeAttendancePaginated(
         @PathVariable Long employeeId,
